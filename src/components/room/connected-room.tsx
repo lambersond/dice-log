@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChannelProvider, useChannel, usePresence } from 'ably/react'
 import { Copy } from 'lucide-react'
 import Image from 'next/image'
@@ -148,9 +148,22 @@ function RoomHeader({
   code,
   channelName,
 }: Readonly<{ code: string; channelName: string }>) {
+  const [copied, setCopied] = useState(false)
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    },
+    [],
+  )
+
   const handleShare = async () => {
     if (globalThis.window === undefined) return
     await copyTextToClipboard(`${globalThis.location.origin}/room/${code}`)
+    setCopied(true)
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
+    copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
   return (
     <header className='flex items-center justify-between gap-2 border-b border-border-light bg-appbar p-3'>
@@ -186,8 +199,9 @@ function RoomHeader({
           icon={Copy}
           onClick={handleShare}
           aria-label='Copy room link'
+          className='min-w-20 justify-between'
         >
-          Share
+          {copied ? 'Copied' : 'Share'}
         </Button>
       </div>
     </header>
