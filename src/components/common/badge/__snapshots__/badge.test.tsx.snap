@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`components/common/badge should match the snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="bg-stone-200 text-text-secondary rounded-md px-2 py-1 inline-flex items-center gap-1"
+  >
+    <p
+      class="text-xs font-medium"
+    >
+      hello
+    </p>
+  </div>
+</DocumentFragment>
+`;

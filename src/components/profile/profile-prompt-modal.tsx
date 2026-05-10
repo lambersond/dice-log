@@ -1,0 +1,32 @@
+'use client'
+
+import { ProfileForm } from './profile-form'
+import { type UserProfile } from '@/hooks/use-user-profile'
+
+type Props = {
+  onSave: (profile: UserProfile) => void
+}
+
+/**
+ * Blocking modal shown when a user lands directly in a room without a saved
+ * profile. No close affordance — they must pick a name before joining so
+ * presence and rolls show up correctly to the rest of the table.
+ */
+export function ProfilePromptModal({ onSave }: Readonly<Props>) {
+  return (
+    <div
+      role='dialog'
+      aria-modal='true'
+      aria-label='Set up your profile'
+      className='fixed inset-0 z-50 flex items-center justify-center px-4'
+    >
+      <div aria-hidden='true' className='absolute inset-0 bg-black/60' />
+      <div className='relative z-10 w-full max-w-md'>
+        <p className='mb-2 text-center text-sm text-text-secondary'>
+          Before you join, pick a name so others can see who you are.
+        </p>
+        <ProfileForm onSave={onSave} title='Set up your profile' />
+      </div>
+    </div>
+  )
+}

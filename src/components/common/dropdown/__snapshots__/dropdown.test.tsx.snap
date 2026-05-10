@@ -1,0 +1,103 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`components/common/dropdown should render correctly 1`] = `
+<DocumentFragment>
+  <div
+    class="relative inline-flex flex-col text-left rounded-md w-full"
+  >
+    <label
+      class="text-[11px] font-semibold text-text-secondary uppercase tracking-widest"
+      for="dropdown"
+    >
+      test
+    </label>
+    <div
+      class="relative mt-1"
+    >
+      <button
+        class="inline-flex items-center justify-between rounded-md border border-border-light bg-paper/60 text-text-primary focus:outline-none cursor-pointer hover:bg-paper/75 w-full w-72 pl-4 pr-2 py-2 text-md"
+        data-testid="Dropdown__button"
+        name="dropdown"
+        type="button"
+      >
+        <span
+          class="flex-1 truncate text-left"
+        >
+          Option 1
+        </span>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-chevron-down text-text-secondary ml-auto size-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+          />
+        </svg>
+      </button>
+    </div>
+    <p
+      class="text-danger text-xs italic h-4 mb-2"
+    />
+  </div>
+</DocumentFragment>
+`;
+
+exports[`components/common/dropdown should render correctly with defaultEmpty 1`] = `
+<DocumentFragment>
+  <div
+    class="relative inline-flex flex-col text-left rounded-md w-full"
+  >
+    <label
+      class="text-[11px] font-semibold text-text-secondary uppercase tracking-widest"
+      for="dropdown"
+    >
+      test
+    </label>
+    <div
+      class="relative mt-1"
+    >
+      <button
+        class="inline-flex items-center justify-between rounded-md border border-border-light bg-paper/60 text-text-primary focus:outline-none cursor-pointer hover:bg-paper/75 w-full w-72 pl-4 pr-2 py-2 text-md"
+        data-testid="Dropdown__button"
+        name="dropdown"
+        type="button"
+      >
+        <span
+          class="flex-1 truncate text-left"
+        >
+          No options available
+        </span>
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-chevron-down text-text-secondary ml-auto size-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+          />
+        </svg>
+      </button>
+    </div>
+    <p
+      class="text-danger text-xs italic h-4 mb-2"
+    />
+  </div>
+</DocumentFragment>
+`;
