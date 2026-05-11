@@ -1,31 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Avatar } from '@/components/avatar'
 import { Button } from '@/components/common'
 import { ProfileForm } from '@/components/profile'
 import { useUserProfile, type UserProfile } from '@/hooks/use-user-profile'
 
+type Mode = 'loading' | 'setup' | 'welcome' | 'edit'
+
 export function ProfileCard() {
   const { profile, setProfile, isLoaded } = useUserProfile()
-  const [editing, setEditing] = useState(false)
+  const [mode, setMode] = useState<Mode>('loading')
 
-  if (!isLoaded) {
+  useEffect(() => {
+    if (mode !== 'loading' || !isLoaded) return
+    setMode(profile ? 'welcome' : 'setup')
+  }, [isLoaded, profile, mode])
+
+  if (mode === 'loading') {
     return <div className='h-32 animate-pulse rounded-lg bg-card' />
   }
 
-  if (profile && !editing) {
-    return <WelcomeBack profile={profile} onEdit={() => setEditing(true)} />
+  if (mode === 'welcome' && profile) {
+    return <WelcomeBack profile={profile} onEdit={() => setMode('edit')} />
   }
 
   return (
     <ProfileForm
       initial={profile}
+      autoSave={mode === 'setup'}
       onSave={next => {
         setProfile(next)
-        setEditing(false)
+        if (mode === 'edit') setMode('welcome')
       }}
-      onCancel={profile ? () => setEditing(false) : undefined}
+      onCancel={mode === 'edit' ? () => setMode('welcome') : undefined}
     />
   )
 }

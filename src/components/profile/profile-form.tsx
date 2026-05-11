@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Avatar } from '@/components/avatar'
 import { Button, Input } from '@/components/common'
 import { type UserProfile } from '@/hooks/use-user-profile'
@@ -12,6 +12,12 @@ type Props = {
   onCancel?: () => void
   /** Optional override for the form heading. */
   title?: string
+  /**
+   * When true, persist changes on every field update and omit the Save
+   * button. Used for first-time setup so the user doesn't have to remember
+   * to click Save before joining a room.
+   */
+  autoSave?: boolean
 }
 
 export function ProfileForm({
@@ -19,11 +25,24 @@ export function ProfileForm({
   onSave,
   onCancel,
   title,
+  autoSave = false,
 }: Readonly<Props>) {
   const [name, setName] = useState(initial?.name ?? '')
   const [image, setImage] = useState<string | undefined>(initial?.image)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>()
+
+  const onSaveRef = useRef(onSave)
+  useEffect(() => {
+    onSaveRef.current = onSave
+  })
+
+  const trimmedName = name.trim()
+
+  useEffect(() => {
+    if (!autoSave || !trimmedName) return
+    onSaveRef.current({ name: trimmedName, image })
+  }, [autoSave, trimmedName, image])
 
   const handleFile: React.ChangeEventHandler<HTMLInputElement> = async e => {
     const file = e.target.files?.[0]
@@ -42,7 +61,6 @@ export function ProfileForm({
     }
   }
 
-  const trimmedName = name.trim()
   const canSave = !!trimmedName && !busy
 
   return (
@@ -50,7 +68,7 @@ export function ProfileForm({
       className='flex flex-col gap-4 rounded-lg border border-border-light bg-paper p-4'
       onSubmit={e => {
         e.preventDefault()
-        if (!canSave) return
+        if (autoSave || !canSave) return
         onSave({ name: trimmedName, image })
       }}
     >
@@ -98,16 +116,22 @@ export function ProfileForm({
         {error && <p className='text-xs italic text-danger'>{error}</p>}
       </div>
 
-      <div className='flex justify-end gap-2'>
-        {onCancel && (
-          <Button intent='normal' variant='ghost' onClick={onCancel}>
-            Cancel
+      {autoSave ? (
+        <p className='text-xs italic text-text-tertiary'>
+          Saved automatically as you type.
+        </p>
+      ) : (
+        <div className='flex justify-end gap-2'>
+          {onCancel && (
+            <Button intent='normal' variant='ghost' onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button type='submit' disabled={!canSave}>
+            {busy ? 'Compressing…' : 'Save'}
           </Button>
-        )}
-        <Button type='submit' disabled={!canSave}>
-          {busy ? 'Compressing…' : 'Save'}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   )
 }

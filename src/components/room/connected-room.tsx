@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChannelProvider, useChannel, usePresence } from 'ably/react'
+import confetti from 'canvas-confetti'
 import { Copy } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -14,10 +15,30 @@ import { usePersistedChats } from '@/hooks/use-persisted-chats'
 import { usePersistedRolls } from '@/hooks/use-persisted-rolls'
 import { useRollExecutor } from '@/hooks/use-roll-executor'
 import { useUserProfile } from '@/hooks/use-user-profile'
+import { useVisitedRooms } from '@/hooks/use-visited-rooms'
 import { copyTextToClipboard } from '@/utils/copy-text-to-clipboard'
 import type { ChatMessage } from '@/types/chat'
 import type { RollResult, RollerInfo } from '@/types/roll'
 import type * as Ably from 'ably'
+
+/** Skip confetti for replayed rolls coming in via channel rewind. */
+const FRESH_ROLL_WINDOW_MS = 30_000
+
+function isSoloNat20(result: RollResult): boolean {
+  if (result.pools.length !== 1) return false
+  const pool = result.pools[0]
+  if (pool.sides !== 20 || pool.count !== 1) return false
+  return pool.kept[0] === 20
+}
+
+function fireNat20Confetti() {
+  confetti({
+    particleCount: 150,
+    spread: 80,
+    startVelocity: 45,
+    origin: { y: 0.65 },
+  })
+}
 
 type Props = {
   code: string
@@ -46,12 +67,17 @@ export function ConnectedRoom({ code, userId }: Readonly<Props>) {
 function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
   const channelName = `room:${code}`
   const { profile, setProfile, isLoaded: profileLoaded } = useUserProfile()
+  const { addVisit } = useVisitedRooms()
   const { rolls, append: appendRoll } = usePersistedRolls(
     `dice-log:rolls:room:${code}`,
   )
   const { chats, append: appendChat } = usePersistedChats(
     `dice-log:chats:room:${code}`,
   )
+
+  useEffect(() => {
+    addVisit(code)
+  }, [addVisit, code])
 
   // Memoize so the update-on-edit effect below doesn't fire on every render.
   const presenceData = useMemo(
@@ -85,6 +111,7 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
     userId,
     onLocalResult: result => {
       appendRoll(result)
+      if (isSoloNat20(result)) fireNat20Confetti()
       void publish('roll', result)
     },
   })
@@ -97,6 +124,12 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
       if (message.name === 'roll') {
         const result = message.data as RollResult
         appendRoll(result)
+        if (
+          isSoloNat20(result) &&
+          Date.now() - result.at <= FRESH_ROLL_WINDOW_MS
+        ) {
+          fireNat20Confetti()
+        }
         await playRemote(result)
       } else if (message.name === 'chat') {
         appendChat(message.data as ChatMessage)

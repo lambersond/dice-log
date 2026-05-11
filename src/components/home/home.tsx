@@ -1,7 +1,7 @@
 import { DiceBackground } from './dice-background'
 import { ProfileCard } from './profile-card'
+import { RecentRoomsCard } from './recent-rooms-card'
 import { RoomActions } from './room-actions'
-import { DicePreferencesCard } from '@/components/dice-preferences'
 
 export function Home() {
   return (
@@ -18,8 +18,8 @@ export function Home() {
             </p>
           </header>
           <ProfileCard />
-          <DicePreferencesCard />
           <RoomActions />
+          <RecentRoomsCard />
         </div>
       </div>
     </>

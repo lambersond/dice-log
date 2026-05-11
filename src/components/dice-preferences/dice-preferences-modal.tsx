@@ -59,7 +59,7 @@ export function DicePreferencesModal({ onClose }: Readonly<Props>) {
       role='dialog'
       aria-modal='true'
       aria-label='Customize dice'
-      className='fixed inset-0 z-50 flex items-center justify-center px-4'
+      className='fixed inset-0 z-50 flex sm:items-center sm:justify-center sm:px-4'
     >
       <button
         type='button'
@@ -67,7 +67,7 @@ export function DicePreferencesModal({ onClose }: Readonly<Props>) {
         onClick={onClose}
         className='absolute inset-0 cursor-default bg-black/60'
       />
-      <div className='relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-paper shadow-2xl'>
+      <div className='relative z-10 flex h-full w-full flex-col overflow-hidden bg-paper shadow-2xl sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-xl'>
         <header className='flex items-center justify-between border-b border-border-light p-3'>
           <h2 className='text-lg font-semibold text-text-primary'>
             Customize dice
