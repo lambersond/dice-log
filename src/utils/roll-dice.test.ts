@@ -339,5 +339,37 @@ describe('utils/roll-dice', () => {
       )
       expect(toDiceBoxNotation(result)).toBe('')
     })
+
+    it('splits a d100 into a tens die and a units die', () => {
+      // Math.random 0.55 -> floor(55) + 1 = 56
+      stubRandom(0.55)
+      const result = executeRoll(
+        { pools: [{ sides: 100, count: 1 }], modifier: 0 },
+        ROLLER,
+      )
+      // tens die fed 5 (shows "50"), units die fed 6 (shows "6") => 56
+      expect(toDiceBoxNotation(result)).toBe('1d100+1d10@5,6')
+    })
+
+    it('feeds 0/0 for a d100 result of 100 (reads as 00 + 0)', () => {
+      // Math.random 0.999 -> floor(99.9) + 1 = 100
+      stubRandom(0.999)
+      const result = executeRoll(
+        { pools: [{ sides: 100, count: 1 }], modifier: 0 },
+        ROLLER,
+      )
+      expect(toDiceBoxNotation(result)).toBe('1d100+1d10@0,0')
+    })
+
+    it('keeps tens and units grouped by set for multiple d100s', () => {
+      // 0.04 -> 5, 0.55 -> 56
+      stubRandom(0.04, 0.55)
+      const result = executeRoll(
+        { pools: [{ sides: 100, count: 2 }], modifier: 0 },
+        ROLLER,
+      )
+      // tens first (0 for 5, 5 for 56), then units (5 for 5, 6 for 56)
+      expect(toDiceBoxNotation(result)).toBe('2d100+2d10@0,5,5,6')
+    })
   })
 })

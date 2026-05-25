@@ -1,15 +1,19 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { useVisitedRooms } from '@/hooks/use-visited-rooms'
 
 const MS_PER_DAY = 86_400_000
+const COLLAPSED_COUNT = 5
 
 function relativeDays(at: number): string {
   const startOfDay = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const days = Math.round((startOfDay(new Date()) - startOfDay(new Date(at))) / MS_PER_DAY)
+  const days = Math.round(
+    (startOfDay(new Date()) - startOfDay(new Date(at))) / MS_PER_DAY,
+  )
   if (days <= 0) return 'today'
   if (days === 1) return 'yesterday'
   return `${days} days ago`
@@ -18,16 +22,20 @@ function relativeDays(at: number): string {
 export function RecentRoomsCard() {
   const { profile, isLoaded: profileLoaded } = useUserProfile()
   const { visits, isLoaded: visitsLoaded } = useVisitedRooms()
+  const [expanded, setExpanded] = useState(false)
 
   if (!profileLoaded || !visitsLoaded) return null
   if (!profile) return null
   if (visits.length === 0) return null
 
+  const hasMore = visits.length > COLLAPSED_COUNT
+  const shown = expanded ? visits : visits.slice(0, COLLAPSED_COUNT)
+
   return (
     <div className='flex flex-col gap-2 rounded-lg border border-border-light bg-paper p-4'>
       <h2 className='text-lg font-semibold text-text-primary'>Recent rooms</h2>
       <ul className='flex flex-col'>
-        {visits.map(v => (
+        {shown.map(v => (
           <li key={v.code}>
             <Link
               href={`/room/${v.code}`}
@@ -43,6 +51,17 @@ export function RecentRoomsCard() {
           </li>
         ))}
       </ul>
+      {hasMore && (
+        <button
+          type='button'
+          onClick={() => setExpanded(prev => !prev)}
+          className='self-start rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-widest text-text-secondary hover:bg-hover'
+        >
+          {expanded
+            ? 'Show less'
+            : `Show all (${visits.length})`}
+        </button>
+      )}
     </div>
   )
 }

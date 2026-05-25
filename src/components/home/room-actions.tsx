@@ -25,7 +25,6 @@ export function RoomActions() {
       >
         <div className='flex-1'>
           <Input
-            label='Join with a code'
             name='room-code'
             value={code}
             onChange={e => setCode(e.target.value.toUpperCase())}

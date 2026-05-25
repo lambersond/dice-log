@@ -18,8 +18,8 @@ export function Home() {
             </p>
           </header>
           <ProfileCard />
-          <RoomActions />
           <RecentRoomsCard />
+          <RoomActions />
         </div>
       </div>
     </>

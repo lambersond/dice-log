@@ -142,6 +142,13 @@ export function formatResultExpression(result: RollResult): string {
  * Modifier is intentionally omitted — total is computed from the deterministic
  * result, not from the canvas. Explosion follow-up dice are appended so the
  * canvas spawns an extra die for each explosion.
+ *
+ * Percentile (d100) results render as a pair of physical d10s: a "tens" die
+ * (dice-box `d100` type, faces 00–90) and a "units" die (`d10` type, faces
+ * 0–9). dice-box maps a single digit fed to a d100 die to its tens face (n×10,
+ * with 0 → "00") and a 0 fed to a d10 die to "0", so we split each result into
+ * its tens digit and units digit. Reading the two together reproduces the
+ * value (e.g. 56 → "50" + "6"; 100 → "00" + "0").
  */
 export function toDiceBoxNotation(result: RollResult): string {
   const notationParts: string[] = []
@@ -149,9 +156,20 @@ export function toDiceBoxNotation(result: RollResult): string {
   for (const pool of result.pools) {
     const initial = pool.rolls.flat()
     const explosionsFlat = (pool.explosions ?? []).flat()
-    const totalDice = initial.length + explosionsFlat.length
-    notationParts.push(`${totalDice}d${pool.sides}`)
-    allValues.push(...initial, ...explosionsFlat)
+    const faceValues = [...initial, ...explosionsFlat]
+
+    if (pool.sides === 100) {
+      notationParts.push(`${faceValues.length}d100`, `${faceValues.length}d10`)
+      // dice-box maps result values positionally to spawned dice, set by set,
+      // so every tens die comes first, then every units die.
+      allValues.push(
+        ...faceValues.map(v => Math.floor(v / 10) % 10),
+        ...faceValues.map(v => v % 10),
+      )
+    } else {
+      notationParts.push(`${faceValues.length}d${pool.sides}`)
+      allValues.push(...faceValues)
+    }
   }
   const dice = notationParts.join('+')
   return allValues.length > 0 ? `${dice}@${allValues.join(',')}` : dice

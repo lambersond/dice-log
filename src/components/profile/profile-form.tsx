@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Camera, Upload } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { Button, Input } from '@/components/common'
 import { type UserProfile } from '@/hooks/use-user-profile'
@@ -93,21 +94,33 @@ export function ProfileForm({
         >
           Avatar (optional)
         </label>
-        <div className='flex items-center gap-3'>
-          <Avatar
-            name={trimmedName || 'anonymous'}
-            image={image}
-            className='size-16'
-            alt='Avatar preview'
-          />
-          <input
-            id='avatar-input'
-            type='file'
-            accept='image/*'
-            onChange={handleFile}
-            className='cursor-pointer text-sm text-text-secondary'
-          />
-        </div>
+        <label
+          htmlFor='avatar-input'
+          className='flex w-fit cursor-pointer items-center gap-3'
+        >
+          <span className='group relative inline-block'>
+            <Avatar
+              name={trimmedName || 'anonymous'}
+              image={image}
+              className='size-16'
+              alt='Avatar preview'
+            />
+            <span className='absolute inset-0 flex items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity group-hover:opacity-100'>
+              <Camera className='size-5 text-white' aria-hidden='true' />
+            </span>
+          </span>
+          <span className='inline-flex items-center gap-2 rounded-md border border-border-light px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-hover'>
+            <Upload className='size-4' aria-hidden='true' />
+            {image ? 'Change photo' : 'Upload photo'}
+          </span>
+        </label>
+        <input
+          id='avatar-input'
+          type='file'
+          accept='image/*'
+          onChange={handleFile}
+          className='sr-only'
+        />
         <p className='text-xs italic text-text-tertiary'>
           {image
             ? 'Using your uploaded picture.'
