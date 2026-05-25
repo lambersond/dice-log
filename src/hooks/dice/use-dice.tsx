@@ -9,6 +9,9 @@ import { useDiceBoxThreejs } from './use-dice-box-threejs'
 
 const CONTAINER_SELECTOR = '#dice-canvas-threejs'
 
+/** How long the dice layer takes to dissolve out once a roll's dwell ends. */
+const EXIT_DURATION_MS = 450
+
 function getContainer() {
   return document.querySelector<HTMLElement>(CONTAINER_SELECTOR)
 }
@@ -18,7 +21,50 @@ function showContainer(el: HTMLElement) {
 }
 
 function hideContainer(el: HTMLElement) {
+  // By the time this runs the dice have already shrunk to nothing in the 3D
+  // scene, so just drop the (now-empty) layer out.
   el.style.opacity = '0'
+}
+
+/**
+ * Shrinks each die in place (3D mesh scale 1 -> 0) over EXIT_DURATION_MS, then
+ * tears the dice down with clearDice(). Scaling the meshes — rather than the
+ * shared canvas element — keeps every die collapsing around its own center
+ * instead of drifting toward screen-center. We drive our own render loop
+ * because the library stops rendering once a throw settles.
+ *
+ * If a new roll starts mid-shrink, activeRollCount is no longer 0; that roll
+ * owns the table (its throw clears the old dice), so we bail out.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped lib internals
+function shrinkAndClear(db: any, container: HTMLElement | null) {
+  const dice: Array<{ scale?: { setScalar: (n: number) => void } }> =
+    Array.isArray(db?.diceList) ? [...db.diceList] : []
+
+  const finish = () => {
+    db?.clearDice?.()
+    if (container) hideContainer(container)
+  }
+
+  if (dice.length === 0) {
+    finish()
+    return
+  }
+
+  const start = performance.now()
+  const tick = (now: number) => {
+    if (activeRollCount !== 0) return
+    const progress = Math.min((now - start) / EXIT_DURATION_MS, 1)
+    const scale = Math.max(1 - progress, 0.0001)
+    for (const die of dice) die.scale?.setScalar(scale)
+    db?.renderer?.render?.(db.scene, db.camera)
+    if (progress < 1) {
+      requestAnimationFrame(tick)
+    } else {
+      finish()
+    }
+  }
+  requestAnimationFrame(tick)
 }
 
 // Shared across all useDice() instances so concurrent rolls from different
@@ -65,7 +111,7 @@ export function useDice(): UseDiceBox {
   }
 
   async function roll(notation: DiceNotation, options?: RollOptions) {
-    const { timeout = 1250, themeColor } = options ?? {}
+    const { timeout = 1000, themeColor } = options ?? {}
 
     assert(
       isInitialized,
@@ -103,9 +149,7 @@ export function useDice(): UseDiceBox {
     setTimeout(() => {
       activeRollCount -= 1
       if (activeRollCount === 0) {
-        if (container) hideContainer(container)
-        // @ts-ignore
-        dicebox.clearDice()
+        shrinkAndClear(db, container)
       }
     }, timeout)
 
