@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import clsx from 'clsx'
 import { Avatar } from '@/components/avatar'
 import { useRelativeTime } from '@/hooks/use-relative-time'
@@ -14,6 +15,8 @@ type Props = {
 
 export function LogEntry({ roll, isMine = false }: Readonly<Props>) {
   const when = useRelativeTime(roll.at)
+  const [showAbsolute, setShowAbsolute] = useState(false)
+  const absolute = new Date(roll.at).toLocaleString()
   return (
     <div
       className={clsx(
@@ -35,9 +38,14 @@ export function LogEntry({ roll, isMine = false }: Readonly<Props>) {
             <p className='truncate text-sm font-semibold text-text-primary'>
               {roll.roller.name ?? 'Anonymous'}
             </p>
-            <span className='shrink-0 text-[10px] text-text-tertiary'>
-              {when}
-            </span>
+            <button
+              type='button'
+              onClick={() => setShowAbsolute(v => !v)}
+              title={absolute}
+              className='shrink-0 cursor-pointer text-[10px] text-text-tertiary hover:text-text-secondary'
+            >
+              {showAbsolute ? absolute : when}
+            </button>
           </div>
           <p className='truncate font-mono text-xs text-text-secondary'>
             {formatResultExpression(roll)}
@@ -48,8 +56,8 @@ export function LogEntry({ roll, isMine = false }: Readonly<Props>) {
         </div>
       </div>
       <div className='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1'>
-        {roll.pools.map((pool, i) => (
-          <PoolDisplay key={`pool-${i}`} pool={pool} />
+        {roll.pools.map(pool => (
+          <PoolDisplay key={pool.sides} pool={pool} />
         ))}
         {roll.modifier !== 0 && (
           <span className='font-mono text-xs text-text-secondary'>
@@ -109,41 +117,47 @@ function dieValueClass(
 }
 
 function PoolDisplay({ pool }: Readonly<{ pool: DiePool }>) {
+  // Precompute a stable id per die so the key prop isn't an array-index
+  // expression. A roll result is immutable, so id-by-position is stable.
+  const dice = pool.rolls.map((dieRolls, i) => ({
+    id: `${pool.sides}-${i}`,
+    rolls: dieRolls,
+    kept: pool.kept[i],
+    chain: pool.explosions?.[i] ?? [],
+  }))
+
   return (
     <div className='flex items-center gap-1'>
       <span className='font-mono text-[10px] uppercase text-text-secondary'>
         d{pool.sides}
       </span>
       <div className='flex flex-wrap gap-1'>
-        {pool.rolls.map((dieRolls, i) => {
-          const chain = pool.explosions?.[i] ?? []
-          return (
-            <div key={`die-${i}`} className='flex items-center gap-px'>
-              {dieRolls.map((value, j) => (
-                <span
-                  key={`die-${i}-${j}`}
-                  className={clsx(
-                    'inline-flex size-6 items-center justify-center rounded border text-xs',
-                    dieValueClass(value, pool.kept[i], dieRolls.length > 1),
-                  )}
-                >
+        {dice.map(die => (
+          <div key={die.id} className='flex items-center gap-px'>
+            {die.rolls.map((value, j) => (
+              <span
+                key={`${die.id}-r${j}`}
+                className={clsx(
+                  'inline-flex size-6 items-center justify-center rounded border text-xs',
+                  dieValueClass(value, die.kept, die.rolls.length > 1),
+                )}
+              >
+                {value}
+              </span>
+            ))}
+            {die.chain.map((value, k) => (
+              <span
+                key={`${die.id}-x${k}`}
+                className='inline-flex items-center text-warning'
+              >
+                <span className='font-mono text-[10px]'>!</span>
+                <span className='inline-flex size-6 items-center justify-center rounded border border-warning bg-warning/10 text-xs font-semibold'>
                   {value}
                 </span>
-              ))}
-              {chain.map((value, k) => (
-                <span
-                  key={`expl-${i}-${k}`}
-                  className='inline-flex items-center text-warning'
-                >
-                  <span className='font-mono text-[10px]'>!</span>
-                  <span className='inline-flex size-6 items-center justify-center rounded border border-warning bg-warning/10 text-xs font-semibold'>
-                    {value}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )
-        })}
+              </span>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   )
