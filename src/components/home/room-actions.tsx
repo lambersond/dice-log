@@ -13,7 +13,7 @@ export function RoomActions() {
 
   return (
     <div className='flex flex-col gap-4 rounded-lg border border-border-light bg-paper p-4'>
-      <h2 className='text-lg font-semibold text-text-primary'>Pick a room</h2>
+      <h2 className='text-lg font-semibold text-text-primary'>Enter a room</h2>
 
       <form
         className='flex items-end gap-2'

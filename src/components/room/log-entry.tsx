@@ -1,5 +1,8 @@
+'use client'
+
 import clsx from 'clsx'
 import { Avatar } from '@/components/avatar'
+import { useRelativeTime } from '@/hooks/use-relative-time'
 import { formatResultExpression } from '@/utils/roll-dice'
 import type { ChatMessage } from '@/types/chat'
 import type { DiePool, RollResult } from '@/types/roll'
@@ -10,6 +13,7 @@ type Props = {
 }
 
 export function LogEntry({ roll, isMine = false }: Readonly<Props>) {
+  const when = useRelativeTime(roll.at)
   return (
     <div
       className={clsx(
@@ -27,9 +31,14 @@ export function LogEntry({ roll, isMine = false }: Readonly<Props>) {
           className='size-8'
         />
         <div className='min-w-0 flex-1'>
-          <p className='truncate text-sm font-semibold text-text-primary'>
-            {roll.roller.name ?? 'Anonymous'}
-          </p>
+          <div className='flex items-baseline gap-2'>
+            <p className='truncate text-sm font-semibold text-text-primary'>
+              {roll.roller.name ?? 'Anonymous'}
+            </p>
+            <span className='shrink-0 text-[10px] text-text-tertiary'>
+              {when}
+            </span>
+          </div>
           <p className='truncate font-mono text-xs text-text-secondary'>
             {formatResultExpression(roll)}
           </p>

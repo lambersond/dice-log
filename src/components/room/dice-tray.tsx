@@ -77,12 +77,41 @@ const EMPTY_MOD_COUNTS: ModCounts = {
 const computeModifier = (c: ModCounts) =>
   (c.plusFive - c.minusFive) * 5 + c.plusOne - c.minusOne
 
+/**
+ * Long-press detection for a single button. Returns handlers to wire into
+ * touch events plus a `triggered` ref so the press-release click can tell it
+ * fired (and suppress the tap that would otherwise follow).
+ */
+function useLongPress(onLongPress: () => void) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const triggered = useRef(false)
+
+  const start = () => {
+    triggered.current = false
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      triggered.current = true
+      onLongPress()
+    }, LONG_PRESS_MS)
+  }
+
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = undefined
+    }
+  }
+
+  return { start, cancel, triggered }
+}
+
 export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
   const [pools, setPools] = useState<ReadonlyMap<DieSides, number>>(new Map())
   const [modCounts, setModCounts] = useState<ModCounts>(EMPTY_MOD_COUNTS)
   const [advantage, setAdvantage] = useState<Advantage | undefined>()
   const [exploding, setExploding] = useState(false)
   const [menuFor, setMenuFor] = useState<DieSides | undefined>()
+  const [modMenuFor, setModMenuFor] = useState<keyof ModCounts | undefined>()
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -96,17 +125,22 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
     }
   }
 
-  // Close-on-outside-click / escape for the per-die menu. setTimeout(0) defers
-  // the listener so the click that opened the menu doesn't immediately close it.
+  // Close-on-outside-click / escape for the per-die and per-modifier menus.
+  // setTimeout(0) defers the listener so the click that opened the menu doesn't
+  // immediately close it.
   useEffect(() => {
-    if (menuFor === undefined) return
+    if (menuFor === undefined && modMenuFor === undefined) return
+    const closeMenus = () => {
+      setMenuFor(undefined)
+      setModMenuFor(undefined)
+    }
     const onDocClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (target.closest('[data-die-menu]')) return
-      setMenuFor(undefined)
+      if (target.closest('[data-tray-menu]')) return
+      closeMenus()
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuFor(undefined)
+      if (e.key === 'Escape') closeMenus()
     }
     const armId = setTimeout(() => {
       document.addEventListener('click', onDocClick)
@@ -117,7 +151,7 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
       document.removeEventListener('click', onDocClick)
       document.removeEventListener('keydown', onKey)
     }
-  }, [menuFor])
+  }, [menuFor, modMenuFor])
 
   const incrementDie = (sides: DieSides) =>
     setPools(prev => {
@@ -152,6 +186,18 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
         : { ...prev, [key]: prev[key] + 1 },
     )
 
+  const removeOneMod = (key: keyof ModCounts) =>
+    setModCounts(prev => ({ ...prev, [key]: Math.max(prev[key] - 1, 0) }))
+
+  const clearMod = (key: keyof ModCounts) =>
+    setModCounts(prev => ({ ...prev, [key]: 0 }))
+
+  const openModMenu = (key: keyof ModCounts) => {
+    if (modCounts[key] === 0) return
+    setMenuFor(undefined)
+    setModMenuFor(key)
+  }
+
   const toggleAdvantage = (target: Advantage) =>
     setAdvantage(prev => (prev === target ? undefined : target))
 
@@ -185,6 +231,7 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
 
   const openMenu = (sides: DieSides) => {
     if ((pools.get(sides) ?? 0) === 0) return
+    setModMenuFor(undefined)
     setMenuFor(sides)
   }
 
@@ -271,33 +318,49 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
 
       <div className='grid grid-cols-7 gap-1'>
         <ModButton
+          label='−5'
           onClick={() => bumpMod('minusFive', 'plusFive')}
           disabled={disabled}
           count={modCounts.minusFive}
-        >
-          −5
-        </ModButton>
+          menuOpen={modMenuFor === 'minusFive'}
+          onOpenMenu={() => openModMenu('minusFive')}
+          onCloseMenu={() => setModMenuFor(undefined)}
+          onRemoveOne={() => removeOneMod('minusFive')}
+          onClearAll={() => clearMod('minusFive')}
+        />
         <ModButton
+          label='−1'
           onClick={() => bumpMod('minusOne', 'plusOne')}
           disabled={disabled}
           count={modCounts.minusOne}
-        >
-          −1
-        </ModButton>
+          menuOpen={modMenuFor === 'minusOne'}
+          onOpenMenu={() => openModMenu('minusOne')}
+          onCloseMenu={() => setModMenuFor(undefined)}
+          onRemoveOne={() => removeOneMod('minusOne')}
+          onClearAll={() => clearMod('minusOne')}
+        />
         <ModButton
+          label='+1'
           onClick={() => bumpMod('plusOne', 'minusOne')}
           disabled={disabled}
           count={modCounts.plusOne}
-        >
-          +1
-        </ModButton>
+          menuOpen={modMenuFor === 'plusOne'}
+          onOpenMenu={() => openModMenu('plusOne')}
+          onCloseMenu={() => setModMenuFor(undefined)}
+          onRemoveOne={() => removeOneMod('plusOne')}
+          onClearAll={() => clearMod('plusOne')}
+        />
         <ModButton
+          label='+5'
           onClick={() => bumpMod('plusFive', 'minusFive')}
           disabled={disabled}
           count={modCounts.plusFive}
-        >
-          +5
-        </ModButton>
+          menuOpen={modMenuFor === 'plusFive'}
+          onOpenMenu={() => openModMenu('plusFive')}
+          onCloseMenu={() => setModMenuFor(undefined)}
+          onRemoveOne={() => removeOneMod('plusFive')}
+          onClearAll={() => clearMod('plusFive')}
+        />
         <ToggleButton
           active={advantage === 'adv'}
           activeClass='border-emerald-500 bg-emerald-500 text-white'
@@ -377,7 +440,7 @@ function DieMenu({
 }>) {
   return (
     <div
-      data-die-menu
+      data-tray-menu
       role='menu'
       className='absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 min-w-32 overflow-hidden rounded-md border border-border-light bg-paper text-sm text-text-primary shadow-lg'
     >
@@ -401,37 +464,124 @@ function DieMenu({
   )
 }
 
+function ModMenu({
+  label,
+  count,
+  onRemove,
+  onClear,
+}: Readonly<{
+  label: string
+  count: number
+  onRemove: () => void
+  onClear: () => void
+}>) {
+  return (
+    <div
+      data-tray-menu
+      role='menu'
+      className='absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 min-w-32 overflow-hidden rounded-md border border-border-light bg-paper text-sm text-text-primary shadow-lg'
+    >
+      <button
+        type='button'
+        role='menuitem'
+        onClick={onRemove}
+        className='block w-full cursor-pointer px-3 py-2 text-left hover:bg-hover'
+      >
+        Remove 1 (×{count})
+      </button>
+      <button
+        type='button'
+        role='menuitem'
+        onClick={onClear}
+        className='block w-full cursor-pointer border-t border-border-light px-3 py-2 text-left hover:bg-hover'
+      >
+        Clear {label}
+      </button>
+    </div>
+  )
+}
+
 function ModButton({
-  children,
+  label,
   onClick,
   disabled,
   count = 0,
+  menuOpen,
+  onOpenMenu,
+  onCloseMenu,
+  onRemoveOne,
+  onClearAll,
 }: Readonly<{
-  children: React.ReactNode
+  label: string
   onClick: () => void
   disabled?: boolean
   count?: number
+  menuOpen: boolean
+  onOpenMenu: () => void
+  onCloseMenu: () => void
+  onRemoveOne: () => void
+  onClearAll: () => void
 }>) {
   const active = count > 0
+  const longPress = useLongPress(() => {
+    if (active) onOpenMenu()
+  })
+
   return (
-    <button
-      type='button'
-      onClick={onClick}
-      disabled={disabled}
-      className={clsx(
-        'relative cursor-pointer rounded-md border py-2 text-xs sm:text-sm font-mono disabled:cursor-not-allowed disabled:opacity-50',
-        active
-          ? 'border-primary bg-primary/10 text-primary'
-          : 'border-border-light text-text-primary hover:bg-hover',
+    <div className='relative'>
+      <button
+        type='button'
+        onClick={e => {
+          // A long-press just opened the menu — swallow the release click so it
+          // neither bumps the modifier nor reaches the close-on-click listener.
+          if (longPress.triggered.current) {
+            longPress.triggered.current = false
+            e.stopPropagation()
+            return
+          }
+          onClick()
+        }}
+        onContextMenu={e => {
+          e.preventDefault()
+          if (active) onOpenMenu()
+        }}
+        onTouchStart={() => {
+          if (active) longPress.start()
+        }}
+        onTouchEnd={longPress.cancel}
+        onTouchMove={longPress.cancel}
+        onTouchCancel={longPress.cancel}
+        disabled={disabled}
+        className={clsx(
+          'relative h-full w-full cursor-pointer rounded-md border py-2 text-xs sm:text-sm font-mono select-none disabled:cursor-not-allowed disabled:opacity-50',
+          active
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-border-light text-text-primary hover:bg-hover',
+        )}
+      >
+        {label}
+        {active && (
+          <span className='absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white'>
+            {count}
+          </span>
+        )}
+      </button>
+
+      {menuOpen && (
+        <ModMenu
+          label={label}
+          count={count}
+          onRemove={() => {
+            onRemoveOne()
+            onCloseMenu()
+          }}
+          onClear={() => {
+            onClearAll()
+            onCloseMenu()
+          }}
+        />
       )}
-    >
-      {children}
-      {active && (
-        <span className='absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white'>
-          {count}
-        </span>
-      )}
-    </button>
+    </div>
   )
 }
 
