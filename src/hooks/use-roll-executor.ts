@@ -9,7 +9,6 @@ import {
   CUSTOM_COLORSET_KEY,
   useDicePreferences,
 } from '@/hooks/use-dice-preferences'
-import { useUserProfile } from '@/hooks/use-user-profile'
 import { executeRoll, toDiceBoxNotation } from '@/utils/roll-dice'
 import type {
   RollRequest,
@@ -23,6 +22,15 @@ const FRESH_ROLL_WINDOW_MS = 30_000
 
 type Options = {
   userId: string
+  /**
+   * Roller's current display name. The caller owns the profile state and
+   * passes it in — calling `useUserProfile()` here would create a second
+   * state instance that wouldn't see the caller's `setProfile` updates, so
+   * dice rolls would keep showing the name we read at mount (e.g. undefined
+   * for a brand-new visitor who later fills in the prompt).
+   */
+  name?: string
+  image?: string
   onLocalResult: (result: RollResult) => void
 }
 
@@ -35,16 +43,20 @@ const hasUpdateConfig = (value: unknown): value is DiceBoxLike =>
   value !== null &&
   typeof (value as { updateConfig?: unknown }).updateConfig === 'function'
 
-export function useRollExecutor({ userId, onLocalResult }: Options) {
-  const { profile } = useUserProfile()
+export function useRollExecutor({
+  userId,
+  name,
+  image,
+  onLocalResult,
+}: Options) {
   const { preferences } = useDicePreferences()
   const dice = useDice()
   const dicebox = useDiceBoxThreejs()
   const [busy, setBusy] = useState(false)
 
   const roller = useMemo<RollerInfo>(
-    () => ({ id: userId, name: profile?.name, image: profile?.image }),
-    [userId, profile],
+    () => ({ id: userId, name, image }),
+    [userId, name, image],
   )
 
   // Keep latest prefs in a ref so callbacks can read fresh values without

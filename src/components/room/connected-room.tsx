@@ -85,30 +85,33 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
     [profile?.name, profile?.image],
   )
 
-  // ably/react's `usePresence` enters once on mount with whatever the prop is
-  // at that instant and never re-enters when the prop changes (see the
-  // "messageOrPresenceObjectRef" comment in the lib). We were entering before
-  // localStorage finished loading, so other clients saw us as Anonymous + a
-  // generated identicon. Skipping until the profile is loaded means the
-  // initial `presence.enter` always carries the real name/image.
+  // ably/react's `usePresence` enters once with whatever the prop is at the
+  // first non-skipped render and never re-enters when the prop changes (see
+  // the "messageOrPresenceObjectRef" comment in the lib). So we have to skip
+  // until we actually have a profile — not just until localStorage has loaded
+  // — otherwise a brand-new visitor enters as { name: undefined } and the
+  // later `updateStatus` (after they fill in the prompt) races with the
+  // in-flight enter and frequently leaves other clients showing Anonymous.
   const { updateStatus } = usePresence(
-    { channelName, skip: !profileLoaded },
+    { channelName, skip: !profileLoaded || !profile },
     presenceData,
   )
 
   // Forward subsequent profile edits (e.g. the user changes their name from
-  // inside the room) to the live presence record. `updateStatus` throws if
-  // we haven't entered yet — that's fine, the initial enter already carried
-  // the latest data.
+  // inside the room) to the live presence record. Skip until we've actually
+  // entered — `updateStatus` throws otherwise — which now lines up with the
+  // skip condition on `usePresence`.
   useEffect(() => {
-    if (!profileLoaded) return
+    if (!profileLoaded || !profile) return
     updateStatus(presenceData).catch(error => {
       console.error('Failed to update presence', error)
     })
-  }, [profileLoaded, updateStatus, presenceData])
+  }, [profileLoaded, profile, updateStatus, presenceData])
 
   const { requestRoll, playRemote, busy } = useRollExecutor({
     userId,
+    name: profile?.name,
+    image: profile?.image,
     onLocalResult: result => {
       appendRoll(result)
       if (isSoloNat20(result)) fireNat20Confetti()
@@ -228,7 +231,7 @@ function RoomHeader({
         <Button
           intent='text-secondary'
           variant='ghost'
-          size='sm'
+          size='lg'
           icon={Copy}
           onClick={handleShare}
           aria-label='Copy room link'
