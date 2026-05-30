@@ -15,6 +15,10 @@ type Props = {
   onRollRequest: (request: RollRequest) => void
   onSendMessage: (text: string) => void
   disabled?: boolean
+  /** True while catching up on missed history after returning to the room. */
+  syncing?: boolean
+  /** Render a "new since you left" divider before the first item newer than this. */
+  newSinceAt?: number
   header: ReactNode
 }
 
@@ -25,6 +29,8 @@ export function RoomView({
   onRollRequest,
   onSendMessage,
   disabled = false,
+  syncing = false,
+  newSinceAt,
   header,
 }: Readonly<Props>) {
   // Apply the current user's saved colorset/material to the dice-box whenever
@@ -34,7 +40,18 @@ export function RoomView({
   return (
     <div className='flex min-h-0 flex-1 flex-col'>
       {header}
-      <DiceLog rolls={rolls} chats={chats} myRollerId={userId} />
+      {syncing && (
+        <div className='flex items-center justify-center gap-2 border-b border-border-light bg-card/60 py-1.5 text-xs text-text-secondary'>
+          <span className='size-2 animate-pulse rounded-full bg-primary' />
+          <span>Catching up…</span>
+        </div>
+      )}
+      <DiceLog
+        rolls={rolls}
+        chats={chats}
+        myRollerId={userId}
+        newSinceAt={newSinceAt}
+      />
       <MessageInput
         onSendMessage={onSendMessage}
         onRollRequest={onRollRequest}

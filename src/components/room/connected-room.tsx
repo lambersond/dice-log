@@ -14,6 +14,7 @@ import { ProfilePromptModal } from '@/components/profile'
 import { usePersistedChats } from '@/hooks/use-persisted-chats'
 import { usePersistedRolls } from '@/hooks/use-persisted-rolls'
 import { useRollExecutor } from '@/hooks/use-roll-executor'
+import { useRoomResync } from '@/hooks/use-room-resync'
 import { useUserProfile } from '@/hooks/use-user-profile'
 import { useVisitedRooms } from '@/hooks/use-visited-rooms'
 import { copyTextToClipboard } from '@/utils/copy-text-to-clipboard'
@@ -52,10 +53,17 @@ export function ConnectedRoom({ code, userId }: Readonly<Props>) {
       channelName={channelName}
       options={{
         modes: ['PUBLISH', 'SUBSCRIBE', 'PRESENCE', 'PRESENCE_SUBSCRIBE'],
-        // Channel rewind delivers the last 100 messages on attach so users who
-        // join late see the room's history. Without persistence enabled in the
-        // Ably dashboard, this is bounded to the live store (~2 min); with
-        // persistence on, it goes back further (24h+ depending on plan).
+        // Rewind delivers recent history on attach so late joiners (and quick
+        // refreshes) land in a populated room. Returning after a long
+        // background is handled separately by useRoomResync's History API
+        // backfill — rewind only covers the fresh-attach moment.
+        //
+        // PERSISTENCE: for either rewind beyond ~2 min OR the resync backfill to
+        // reach further than the live store, message persistence must be enabled
+        // on the `room:*` channel namespace in the Ably dashboard
+        // (Channel rules → "Persist last messages"/"Persist all messages").
+        // With persistence on, history is retained up to 72h. Without it, both
+        // paths still work but only recover the last couple of minutes.
         params: { rewind: '100' },
       }}
     >
@@ -79,28 +87,16 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
     addVisit(code)
   }, [addVisit, code])
 
-  // Memoize so the update-on-edit effect below doesn't fire on every render.
   const presenceData = useMemo(
     () => ({ name: profile?.name, image: profile?.image }),
     [profile?.name, profile?.image],
   )
 
-  // ably/react's `usePresence` enters once with whatever the prop is at the
-  // first non-skipped render and never re-enters when the prop changes (see
-  // the "messageOrPresenceObjectRef" comment in the lib). So we have to skip
-  // until we actually have a profile — not just until localStorage has loaded
-  // — otherwise a brand-new visitor enters as { name: undefined } and the
-  // later `updateStatus` (after they fill in the prompt) races with the
-  // in-flight enter and frequently leaves other clients showing Anonymous.
   const { updateStatus } = usePresence(
     { channelName, skip: !profileLoaded || !profile },
     presenceData,
   )
 
-  // Forward subsequent profile edits (e.g. the user changes their name from
-  // inside the room) to the live presence record. Skip until we've actually
-  // entered — `updateStatus` throws otherwise — which now lines up with the
-  // skip condition on `usePresence`.
   useEffect(() => {
     if (!profileLoaded || !profile) return
     updateStatus(presenceData).catch(error => {
@@ -114,26 +110,23 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
     image: profile?.image,
     onLocalResult: result => {
       appendRoll(result)
-      if (isSoloNat20(result)) fireNat20Confetti()
       void publish('roll', result)
+      clearNewSince()
+    },
+    onSettled: result => {
+      if (isSoloNat20(result)) fireNat20Confetti()
     },
   })
 
   const handleIncoming = useCallback(
     async (message: Ably.Message) => {
-      // Skip echoes of our own publish — the local flow already appended (and,
-      // for rolls, animated) this exact item.
       if (message.clientId === userId) return
       if (message.name === 'roll') {
         const result = message.data as RollResult
         appendRoll(result)
-        if (
-          isSoloNat20(result) &&
-          Date.now() - result.at <= FRESH_ROLL_WINDOW_MS
-        ) {
-          fireNat20Confetti()
-        }
+        const fresh = Date.now() - result.at <= FRESH_ROLL_WINDOW_MS
         await playRemote(result)
+        if (fresh && isSoloNat20(result)) fireNat20Confetti()
       } else if (message.name === 'chat') {
         appendChat(message.data as ChatMessage)
       }
@@ -141,7 +134,26 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
     [appendRoll, appendChat, playRemote, userId],
   )
 
-  const { publish } = useChannel(channelName, handleIncoming)
+  const { publish, history } = useChannel(channelName, handleIncoming)
+
+  const rollsRef = useRef(rolls)
+  const chatsRef = useRef(chats)
+  rollsRef.current = rolls
+  chatsRef.current = chats
+
+  const getLatestAt = useCallback(() => {
+    let latest = 0
+    for (const roll of rollsRef.current) if (roll.at > latest) latest = roll.at
+    for (const chat of chatsRef.current) if (chat.at > latest) latest = chat.at
+    return latest
+  }, [])
+
+  const { syncing, newSinceAt, clearNewSince } = useRoomResync({
+    history,
+    getLatestAt,
+    onRoll: appendRoll,
+    onChat: appendChat,
+  })
 
   const sender: RollerInfo = useMemo(
     () => ({ id: userId, name: profile?.name, image: profile?.image }),
@@ -173,6 +185,8 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
         onRollRequest={requestRoll}
         onSendMessage={handleSendMessage}
         disabled={busy || needsProfile}
+        syncing={syncing}
+        newSinceAt={newSinceAt}
         header={<RoomHeader code={code} channelName={channelName} />}
       />
       {needsProfile && <ProfilePromptModal onSave={setProfile} />}

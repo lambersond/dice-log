@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { ChatEntry, LogEntry } from './log-entry'
 import type { ChatMessage } from '@/types/chat'
 import type { RollResult } from '@/types/roll'
@@ -9,13 +9,20 @@ type Props = {
   rolls: readonly RollResult[]
   chats: readonly ChatMessage[]
   myRollerId: string
+  /** Render a "new since you left" divider before the first item newer than this. */
+  newSinceAt?: number
 }
 
 type LogItem =
   | { kind: 'roll'; data: RollResult }
   | { kind: 'chat'; data: ChatMessage }
 
-export function DiceLog({ rolls, chats, myRollerId }: Readonly<Props>) {
+export function DiceLog({
+  rolls,
+  chats,
+  myRollerId,
+  newSinceAt,
+}: Readonly<Props>) {
   const ref = useRef<HTMLDivElement>(null)
 
   const items: readonly LogItem[] = useMemo(() => {
@@ -26,6 +33,12 @@ export function DiceLog({ rolls, chats, myRollerId }: Readonly<Props>) {
     merged.sort((a, b) => a.data.at - b.data.at)
     return merged
   }, [rolls, chats])
+
+  // The first item strictly newer than the marker gets the divider above it.
+  const dividerId = useMemo(() => {
+    if (newSinceAt === undefined) return
+    return items.find(item => item.data.at > newSinceAt)?.data.id
+  }, [items, newSinceAt])
 
   useEffect(() => {
     const el = ref.current
@@ -42,22 +55,35 @@ export function DiceLog({ rolls, chats, myRollerId }: Readonly<Props>) {
           No rolls yet — pick some dice and tap Roll, or say hi.
         </p>
       ) : (
-        items.map(item =>
-          item.kind === 'roll' ? (
-            <LogEntry
-              key={item.data.id}
-              roll={item.data}
-              isMine={item.data.roller.id === myRollerId}
-            />
-          ) : (
-            <ChatEntry
-              key={item.data.id}
-              message={item.data}
-              isMine={item.data.sender.id === myRollerId}
-            />
-          ),
-        )
+        items.map(item => (
+          <Fragment key={item.data.id}>
+            {item.data.id === dividerId && <NewSinceDivider />}
+            {item.kind === 'roll' ? (
+              <LogEntry
+                roll={item.data}
+                isMine={item.data.roller.id === myRollerId}
+              />
+            ) : (
+              <ChatEntry
+                message={item.data}
+                isMine={item.data.sender.id === myRollerId}
+              />
+            )}
+          </Fragment>
+        ))
       )}
+    </div>
+  )
+}
+
+function NewSinceDivider() {
+  return (
+    <div className='flex items-center gap-2 py-1'>
+      <span className='h-px flex-1 bg-primary/40' />
+      <span className='text-[10px] font-semibold uppercase tracking-widest text-primary'>
+        New since you left
+      </span>
+      <span className='h-px flex-1 bg-primary/40' />
     </div>
   )
 }

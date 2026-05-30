@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Camera','Upload','ImagePlus','ImageUp','Pencil','Image'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")"
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Camera','Upload','ImagePlus','ImageUp','Pencil','Image'].forEach\\(n=>console.log\\(n, !!l[n]\\)\\)\")",
+      "Bash(grep -rn \"room:\\\\|\\\\`room\\\\|channelName =\\\\|channel:\" /Users/dlamberson/workspace/dice-log/src --include=\"*.ts\" --include=\"*.tsx\")"
     ]
   }
 }
