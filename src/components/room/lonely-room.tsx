@@ -1,10 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
-import {
-  DicePreferencesProvider,
-  localStoragePreferences,
-} from '@lambersond/3d-dice-react'
+import { useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { RoomView } from './room-view'
@@ -16,18 +12,7 @@ import { useUserProfile } from '@/hooks/use-user-profile'
 import type { ChatMessage } from '@/types/chat'
 
 export function LonelyRoom({ userId }: Readonly<{ userId: string }>) {
-  // Dice preferences (colour/material) persist under the same key as rooms so a
-  // player's dice look the same solo or together. Lonely needs its own provider
-  // because it lives outside the connected-room tree that supplies one.
-  const storage = useMemo(
-    () => localStoragePreferences('dice-log:dice-preferences'),
-    [],
-  )
-  return (
-    <DicePreferencesProvider storage={storage}>
-      <LonelyRoomInner userId={userId} />
-    </DicePreferencesProvider>
-  )
+  return <LonelyRoomInner userId={userId} />
 }
 
 function LonelyRoomInner({ userId }: Readonly<{ userId: string }>) {

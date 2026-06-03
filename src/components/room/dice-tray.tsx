@@ -326,7 +326,7 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
           size='lg'
           icon={Dices}
           onClick={handleRoll}
-          // disabled={disabled || isEmptyPools}
+          disabled={tray.isEmpty}
           className='flex-1 justify-center text-sm sm:text-base'
         >
           Roll

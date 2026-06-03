@@ -57,6 +57,15 @@ export function Modal({
     }
   }, [isOpen, headerClassName])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   if (!isOpen) return
 
   const headerClassNames = clsx(

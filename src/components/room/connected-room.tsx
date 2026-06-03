@@ -1,10 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  DicePreferencesProvider,
-  localStoragePreferences,
-} from '@lambersond/3d-dice-react'
 import { ChannelProvider, useChannel, usePresence } from 'ably/react'
 import confetti from 'canvas-confetti'
 import { Copy } from 'lucide-react'
@@ -54,32 +50,15 @@ type Props = {
 
 export function ConnectedRoom({ code, userId }: Readonly<Props>) {
   const channelName = `room:${code}`
-  const storage = useMemo(
-    () => localStoragePreferences('dice-log:dice-preferences'),
-    [],
-  )
   return (
     <ChannelProvider
       channelName={channelName}
       options={{
         modes: ['PUBLISH', 'SUBSCRIBE', 'PRESENCE', 'PRESENCE_SUBSCRIBE'],
-        // Rewind delivers recent history on attach so late joiners (and quick
-        // refreshes) land in a populated room. Returning after a long
-        // background is handled separately by useRoomResync's History API
-        // backfill — rewind only covers the fresh-attach moment.
-        //
-        // PERSISTENCE: for either rewind beyond ~2 min OR the resync backfill to
-        // reach further than the live store, message persistence must be enabled
-        // on the `room:*` channel namespace in the Ably dashboard
-        // (Channel rules → "Persist last messages"/"Persist all messages").
-        // With persistence on, history is retained up to 72h. Without it, both
-        // paths still work but only recover the last couple of minutes.
         params: { rewind: '100' },
       }}
     >
-      <DicePreferencesProvider storage={storage}>
-        <ConnectedRoomInner code={code} userId={userId} />
-      </DicePreferencesProvider>
+      <ConnectedRoomInner code={code} userId={userId} />
     </ChannelProvider>
   )
 }
@@ -133,10 +112,6 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
   const handleIncoming = useCallback(
     async (message: Ably.Message) => {
       if (message.clientId === userId) return
-      // flushSync: these run from Ably's listener (not a React event), and the
-      // log re-render wasn't being flushed from that context — only the
-      // React-independent dice renderer updated. Forcing the commit makes the
-      // remote entries appear live like local ones do.
       if (message.name === 'roll') {
         const result = message.data as RollEntry
         flushSync(() => appendRoll(result))
@@ -256,11 +231,11 @@ function RoomHeader({
           {code}
         </span>
       </div>
-      <div className='flex flex-1 items-center justify-end gap-1'>
+      <div className='flex flex-1 items-center justify-end gap-2'>
         <DicePreferencesButton />
         <Button
-          intent='text-secondary'
-          variant='ghost'
+          intent='success'
+          variant='outline'
           size='lg'
           icon={Copy}
           onClick={handleShare}

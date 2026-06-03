@@ -1,23 +1,37 @@
 'use client'
 
-import { useState } from 'react'
-import { Dices } from 'lucide-react'
-import { DicePreferencesModal } from './dice-preferences-modal'
+import { COLORSETS, CUSTOM_COLORSET_KEY } from '@lambersond/3d-dice-core'
+import { useDicePreferences } from '@lambersond/3d-dice-react'
+import { Button } from '../common'
+import { useModals } from '@/components/modals/use-modals'
 
 export function DicePreferencesButton() {
-  const [open, setOpen] = useState(false)
+  const { openModal } = useModals()
+  const { preferences } = useDicePreferences()
+
+  const isCustom = preferences.colorset === CUSTOM_COLORSET_KEY
+  const preset = COLORSETS.find(c => c.key === preferences.colorset)
+  const name = isCustom ? 'Custom' : (preset?.name ?? 'Default')
+  const background = isCustom ? preferences.customColor : preset?.background
+  const foreground = isCustom ? '#ffffff' : preset?.foreground
+
   return (
-    <>
-      <button
-        type='button'
-        onClick={() => setOpen(true)}
-        aria-label='Customize dice'
-        className='inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-900 dark:hover:text-zinc-100'
+    <Button
+      onClick={() => openModal('dice-preferences', {})}
+      aria-label={`Customize dice — current theme: ${name}`}
+      variant='outline'
+      size='lg'
+    >
+      <span
+        className='-mt-1 inline-flex size-5 text-xs shrink-0 items-center justify-center rounded border border-black/10 font-mono '
+        style={{ backgroundColor: background, color: foreground }}
+        aria-hidden='true'
       >
-        <Dices className='size-4' aria-hidden='true' />
-        <span className='sr-only'>Customize dice</span>
-      </button>
-      {open && <DicePreferencesModal onClose={() => setOpen(false)} />}
-    </>
+        20
+      </span>
+      <span className='hidden max-w-24 size-5 truncate sm:inline ml-2'>
+        {name}
+      </span>
+    </Button>
   )
 }
