@@ -25,8 +25,6 @@ export function PlayersButton({ channelName }: Readonly<Props>) {
   const [open, setOpen] = useState(false)
   const { presenceData } = usePresenceListener<PresenceData>(channelName)
 
-  // Ably presence reports one entry per connection; dedupe by clientId so a
-  // user with two tabs only appears once.
   const players: readonly Player[] = useMemo(() => {
     const byId = new Map<string, Player>()
     for (const entry of presenceData) {
@@ -71,8 +69,7 @@ function PlayersModal({
   onClose,
 }: Readonly<{ players: readonly Player[]; onClose: () => void }>) {
   return (
-    <div
-      role='dialog'
+    <dialog
       aria-modal='true'
       aria-label='Players'
       className='fixed inset-0 z-50 flex items-center justify-center px-4'
@@ -118,6 +115,6 @@ function PlayersModal({
           </ul>
         )}
       </div>
-    </div>
+    </dialog>
   )
 }

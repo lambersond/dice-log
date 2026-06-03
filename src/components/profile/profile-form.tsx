@@ -11,13 +11,7 @@ type Props = {
   initial?: UserProfile
   onSave: (profile: UserProfile) => void
   onCancel?: () => void
-  /** Optional override for the form heading. */
   title?: string
-  /**
-   * When true, persist changes on every field update and omit the Save
-   * button. Used for first-time setup so the user doesn't have to remember
-   * to click Save before joining a room.
-   */
   autoSave?: boolean
 }
 

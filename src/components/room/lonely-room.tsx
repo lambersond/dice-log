@@ -1,6 +1,10 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import {
+  DicePreferencesProvider,
+  localStoragePreferences,
+} from '@lambersond/3d-dice-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { RoomView } from './room-view'
@@ -12,6 +16,21 @@ import { useUserProfile } from '@/hooks/use-user-profile'
 import type { ChatMessage } from '@/types/chat'
 
 export function LonelyRoom({ userId }: Readonly<{ userId: string }>) {
+  // Dice preferences (colour/material) persist under the same key as rooms so a
+  // player's dice look the same solo or together. Lonely needs its own provider
+  // because it lives outside the connected-room tree that supplies one.
+  const storage = useMemo(
+    () => localStoragePreferences('dice-log:dice-preferences'),
+    [],
+  )
+  return (
+    <DicePreferencesProvider storage={storage}>
+      <LonelyRoomInner userId={userId} />
+    </DicePreferencesProvider>
+  )
+}
+
+function LonelyRoomInner({ userId }: Readonly<{ userId: string }>) {
   const { profile } = useUserProfile()
   const { rolls, append: appendRoll } = usePersistedRolls(
     'dice-log:rolls:lonely',
@@ -19,9 +38,12 @@ export function LonelyRoom({ userId }: Readonly<{ userId: string }>) {
   const { chats, append: appendChat } = usePersistedChats(
     'dice-log:chats:lonely',
   )
+  // Solo room: no one to keep in sync, so roll the dice for real and read the
+  // result off the physics (non-deterministic) instead of pre-computing it.
   const { requestRoll, busy } = useRollExecutor({
     userId,
     onLocalResult: appendRoll,
+    deterministic: false,
   })
 
   const handleSendMessage = useCallback(

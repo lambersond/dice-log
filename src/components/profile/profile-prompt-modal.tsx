@@ -7,15 +7,9 @@ type Props = {
   onSave: (profile: UserProfile) => void
 }
 
-/**
- * Blocking modal shown when a user lands directly in a room without a saved
- * profile. No close affordance — they must pick a name before joining so
- * presence and rolls show up correctly to the rest of the table.
- */
 export function ProfilePromptModal({ onSave }: Readonly<Props>) {
   return (
-    <div
-      role='dialog'
+    <dialog
       aria-modal='true'
       aria-label='Set up your profile'
       className='fixed inset-0 z-50 flex items-center justify-center px-4'
@@ -27,6 +21,6 @@ export function ProfilePromptModal({ onSave }: Readonly<Props>) {
         </p>
         <ProfileForm onSave={onSave} title='Set up your profile' />
       </div>
-    </div>
+    </dialog>
   )
 }

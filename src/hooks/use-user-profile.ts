@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type UserProfile = {
   name: string
-  /** Optional base64 data URL — empty/undefined means "use a generated identicon". */
   image?: string
 }
 

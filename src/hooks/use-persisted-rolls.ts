@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RollResult } from '@/types/roll'
+import type { RollEntry } from '@/types/roll'
 
 const DEFAULT_MAX = 200
 
-const isRollResult = (value: unknown): value is RollResult => {
+const isRollEntry = (value: unknown): value is RollEntry => {
   if (typeof value !== 'object' || value === null) return false
-  const v = value as Partial<RollResult>
+  const v = value as Partial<RollEntry>
   return (
     typeof v.id === 'string' &&
     typeof v.at === 'number' &&
@@ -23,7 +23,7 @@ export function usePersistedRolls(
   storageKey: string,
   max: number = DEFAULT_MAX,
 ) {
-  const [rolls, setRolls] = useState<RollResult[]>([])
+  const [rolls, setRolls] = useState<RollEntry[]>([])
   const loadedRef = useRef(false)
 
   // Load once per key
@@ -34,7 +34,7 @@ export function usePersistedRolls(
       if (raw) {
         const parsed = JSON.parse(raw) as unknown
         if (Array.isArray(parsed)) {
-          const valid = parsed.filter(isRollResult)
+          const valid = parsed.filter(isRollEntry)
           setRolls(valid.slice(-max))
         } else {
           setRolls([])
@@ -49,7 +49,6 @@ export function usePersistedRolls(
     }
   }, [storageKey, max])
 
-  // Persist on change (skip the initial mount before load completes)
   useEffect(() => {
     if (!loadedRef.current) return
     try {
@@ -60,7 +59,7 @@ export function usePersistedRolls(
   }, [storageKey, rolls])
 
   const append = useCallback(
-    (result: RollResult) => {
+    (result: RollEntry) => {
       setRolls(prev => {
         if (prev.some(r => r.id === result.id)) return prev
         const next = [...prev, result]

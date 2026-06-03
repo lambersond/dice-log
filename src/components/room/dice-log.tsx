@@ -3,10 +3,10 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import { ChatEntry, LogEntry } from './log-entry'
 import type { ChatMessage } from '@/types/chat'
-import type { RollResult } from '@/types/roll'
+import type { RollEntry } from '@/types/roll'
 
 type Props = {
-  rolls: readonly RollResult[]
+  rolls: readonly RollEntry[]
   chats: readonly ChatMessage[]
   myRollerId: string
   /** Render a "new since you left" divider before the first item newer than this. */
@@ -14,7 +14,7 @@ type Props = {
 }
 
 type LogItem =
-  | { kind: 'roll'; data: RollResult }
+  | { kind: 'roll'; data: RollEntry }
   | { kind: 'chat'; data: ChatMessage }
 
 export function DiceLog({
@@ -40,10 +40,14 @@ export function DiceLog({
     return items.find(item => item.data.at > newSinceAt)?.data.id
   }, [items, newSinceAt])
 
+  // Follow the newest entry. Keyed on the last item's id, not the count: once
+  // the log hits its max length the count stays constant as old entries roll
+  // off, so a length-based dep would stop scrolling to new messages.
+  const lastItemId = items.at(-1)?.data.id
   useEffect(() => {
     const el = ref.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [items.length])
+  }, [lastItemId])
 
   return (
     <div

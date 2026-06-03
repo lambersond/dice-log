@@ -1,4 +1,4 @@
-import type { RollerInfo } from './roll'
+import type { RollerInfo } from '@/types/roll'
 
 export type ChatMessage = {
   id: string

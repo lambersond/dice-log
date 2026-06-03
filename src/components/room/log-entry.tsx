@@ -1,15 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { formatResultExpression, type DiePool } from '@lambersond/3d-dice-core'
 import clsx from 'clsx'
 import { Avatar } from '@/components/avatar'
 import { useRelativeTime } from '@/hooks/use-relative-time'
-import { formatResultExpression } from '@/utils/roll-dice'
 import type { ChatMessage } from '@/types/chat'
-import type { DiePool, RollResult } from '@/types/roll'
+import type { RollEntry } from '@/types/roll'
 
 type Props = {
-  roll: RollResult
+  roll: RollEntry
   isMine?: boolean
 }
 

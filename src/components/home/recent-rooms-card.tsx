@@ -24,9 +24,9 @@ export function RecentRoomsCard() {
   const { visits, isLoaded: visitsLoaded } = useVisitedRooms()
   const [expanded, setExpanded] = useState(false)
 
-  if (!profileLoaded || !visitsLoaded) return null
-  if (!profile) return null
-  if (visits.length === 0) return null
+  if (!profileLoaded || !visitsLoaded) return
+  if (!profile) return
+  if (visits.length === 0) return
 
   const hasMore = visits.length > COLLAPSED_COUNT
   const shown = expanded ? visits : visits.slice(0, COLLAPSED_COUNT)
@@ -57,9 +57,7 @@ export function RecentRoomsCard() {
           onClick={() => setExpanded(prev => !prev)}
           className='self-start rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-widest text-text-secondary hover:bg-hover'
         >
-          {expanded
-            ? 'Show less'
-            : `Show all (${visits.length})`}
+          {expanded ? 'Show less' : `Show all (${visits.length})`}
         </button>
       )}
     </div>

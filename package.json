@@ -14,8 +14,10 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@3d-dice/dice-box-threejs": "^0.0.12",
     "@floating-ui/react": "^0.27.19",
+    "@lambersond/3d-dice-core": "^0.1.1",
+    "@lambersond/3d-dice-engine": "^0.1.1",
+    "@lambersond/3d-dice-react": "^0.1.1",
     "ably": "2.21.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",

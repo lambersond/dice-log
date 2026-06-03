@@ -1,6 +1,5 @@
+/* eslint-disable sonarjs/pseudo-random */
 'use client'
-
-/* eslint-disable sonarjs/pseudo-random -- decorative animation, not a security primitive */
 
 import {
   useEffect,
@@ -19,11 +18,6 @@ import {
 
 type DieIcon = ComponentType<SVGAttributes<SVGElement>>
 
-/**
- * The background performs a single dice roll of `2d20 + 3d8 + 2d6 + 1d12 + 2d4`
- * — one Icon per die in the formula, each tumbling across the viewport on its
- * own trajectory.
- */
 const ROLL_COMPOSITION: readonly DieIcon[] = [
   D20Icon,
   D20Icon,
@@ -112,9 +106,6 @@ function spawnDie(id: number, Icon: DieIcon): Die {
 export function DiceBackground() {
   const [dice, setDice] = useState<readonly Die[]>([])
 
-  // Generate randomized trajectories on mount only — server renders empty,
-  // client populates after hydration to avoid SSR/CSR mismatch on the random
-  // values.
   useEffect(() => {
     setDice(ROLL_COMPOSITION.map((Icon, i) => spawnDie(i, Icon)))
   }, [])
@@ -149,12 +140,6 @@ export function DiceBackground() {
   )
 }
 
-/**
- * A faint, off-axis bloom of brand color centered on the viewport — like the
- * trailing wash of a comet drifting behind the page content. The two stacked
- * radial gradients give it a brighter nucleus and a softer halo so it doesn't
- * look like a perfect circle.
- */
 function CenterFlare() {
   return (
     <div

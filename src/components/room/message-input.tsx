@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { parseRollExpression, type RollRequest } from '@lambersond/3d-dice-core'
 import { Send } from 'lucide-react'
 import { Button } from '@/components/common'
-import { parseRollExpression } from '@/utils/parse-roll'
-import type { RollRequest } from '@/types/roll'
 
 type Props = {
   disabled?: boolean

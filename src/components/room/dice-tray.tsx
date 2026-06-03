@@ -7,6 +7,13 @@ import {
   type ComponentType,
   type SVGAttributes,
 } from 'react'
+import {
+  DIE_SIDES,
+  type DieSides,
+  type ModifierKey,
+  type RollRequest,
+} from '@lambersond/3d-dice-core'
+import { useTray } from '@lambersond/3d-dice-react'
 import clsx from 'clsx'
 import { Dices, InfoIcon } from 'lucide-react'
 import { Button, Popover } from '@/components/common'
@@ -18,12 +25,6 @@ import {
   D12Icon,
   D20Icon,
 } from '@/components/common/icons'
-import {
-  DIE_SIDES,
-  type Advantage,
-  type DieSides,
-  type RollRequest,
-} from '@/types/roll'
 
 const DIE_ICON: Record<
   Exclude<DieSides, 100>,
@@ -60,23 +61,6 @@ type Props = {
 
 const LONG_PRESS_MS = 450
 
-type ModCounts = {
-  plusOne: number
-  minusOne: number
-  plusFive: number
-  minusFive: number
-}
-
-const EMPTY_MOD_COUNTS: ModCounts = {
-  plusOne: 0,
-  minusOne: 0,
-  plusFive: 0,
-  minusFive: 0,
-}
-
-const computeModifier = (c: ModCounts) =>
-  (c.plusFive - c.minusFive) * 5 + c.plusOne - c.minusOne
-
 /**
  * Long-press detection for a single button. Returns handlers to wire into
  * touch events plus a `triggered` ref so the press-release click can tell it
@@ -106,12 +90,11 @@ function useLongPress(onLongPress: () => void) {
 }
 
 export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
-  const [pools, setPools] = useState<ReadonlyMap<DieSides, number>>(new Map())
-  const [modCounts, setModCounts] = useState<ModCounts>(EMPTY_MOD_COUNTS)
-  const [advantage, setAdvantage] = useState<Advantage | undefined>()
-  const [exploding, setExploding] = useState(false)
+  // Roll-assembly state (dice, modifiers, advantage, exploding) lives in the
+  // shared tray state machine; only menu/long-press UI state is local.
+  const tray = useTray()
   const [menuFor, setMenuFor] = useState<DieSides | undefined>()
-  const [modMenuFor, setModMenuFor] = useState<keyof ModCounts | undefined>()
+  const [modMenuFor, setModMenuFor] = useState<ModifierKey | undefined>()
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -153,84 +136,24 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
     }
   }, [menuFor, modMenuFor])
 
-  const incrementDie = (sides: DieSides) =>
-    setPools(prev => {
-      const next = new Map(prev)
-      next.set(sides, (next.get(sides) ?? 0) + 1)
-      return next
-    })
-
-  const decrementDie = (sides: DieSides) =>
-    setPools(prev => {
-      const next = new Map(prev)
-      const current = next.get(sides) ?? 0
-      if (current <= 1) next.delete(sides)
-      else next.set(sides, current - 1)
-      return next
-    })
-
-  const clearDieType = (sides: DieSides) =>
-    setPools(prev => {
-      const next = new Map(prev)
-      next.delete(sides)
-      return next
-    })
-
-  // Pressing the inverse button cancels one tap from its sibling before adding
-  // its own count, so the badges always show the *net* +1/+5 vs −1/−5 count
-  // (at most one of each pair non-zero).
-  const bumpMod = (key: keyof ModCounts, opposite: keyof ModCounts) =>
-    setModCounts(prev =>
-      prev[opposite] > 0
-        ? { ...prev, [opposite]: prev[opposite] - 1 }
-        : { ...prev, [key]: prev[key] + 1 },
-    )
-
-  const removeOneMod = (key: keyof ModCounts) =>
-    setModCounts(prev => ({ ...prev, [key]: Math.max(prev[key] - 1, 0) }))
-
-  const clearMod = (key: keyof ModCounts) =>
-    setModCounts(prev => ({ ...prev, [key]: 0 }))
-
-  const openModMenu = (key: keyof ModCounts) => {
-    if (modCounts[key] === 0) return
+  const openModMenu = (key: ModifierKey) => {
+    if (tray.modifiers[key] === 0) return
     setMenuFor(undefined)
     setModMenuFor(key)
   }
 
-  const toggleAdvantage = (target: Advantage) =>
-    setAdvantage(prev => (prev === target ? undefined : target))
-
-  const clearAll = () => {
-    setPools(new Map())
-    setModCounts(EMPTY_MOD_COUNTS)
-    setAdvantage(undefined)
-    setExploding(false)
-  }
-
-  const poolEntries = [...pools.entries()].filter(([, count]) => count > 0)
-  const isEmptyPools = poolEntries.length === 0
-  const modifier = computeModifier(modCounts)
-  const totalModTaps =
-    modCounts.plusOne +
-    modCounts.minusOne +
-    modCounts.plusFive +
-    modCounts.minusFive
-  const isEmptyAll =
-    isEmptyPools && totalModTaps === 0 && advantage === undefined && !exploding
+  const isEmptyPools = tray.poolList.length === 0
 
   const handleRoll = () => {
-    if (isEmptyPools || disabled) return
-    onRoll({
-      pools: poolEntries.map(([sides, count]) => ({ sides, count })),
-      modifier,
-      advantage,
-      exploding,
-    })
+    // Only guard on "nothing to roll". The button's `disabled` attribute is the
+    // production gate for busy/profile; keeping that check out of here means
+    // commenting out the button's `disabled` is enough to spam-test rapid rolls.
+    if (isEmptyPools) return
+    onRoll(tray.toRequest())
   }
 
   const openMenu = (sides: DieSides) => {
-    if ((pools.get(sides) ?? 0) === 0) return
+    if ((tray.pools.get(sides) ?? 0) === 0) return
     setModMenuFor(undefined)
     setMenuFor(sides)
   }
@@ -240,13 +163,13 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
       longPressTriggered.current = false
       return
     }
-    incrementDie(sides)
+    tray.incrementDie(sides)
   }
 
   const startLongPress = (sides: DieSides) => {
     longPressTriggered.current = false
     cancelLongPress()
-    if ((pools.get(sides) ?? 0) === 0) return
+    if ((tray.pools.get(sides) ?? 0) === 0) return
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true
       openMenu(sides)
@@ -257,7 +180,7 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
     <div className='flex flex-col gap-2 border-t border-border-light bg-paper p-3'>
       <div className='grid grid-cols-7 gap-1'>
         {DIE_SIDES.map(sides => {
-          const count = pools.get(sides) ?? 0
+          const count = tray.pools.get(sides) ?? 0
           const active = count > 0
           return (
             <div key={sides} className='relative'>
@@ -302,11 +225,11 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
                   sides={sides}
                   count={count}
                   onRemove={() => {
-                    decrementDie(sides)
+                    tray.decrementDie(sides)
                     setMenuFor(undefined)
                   }}
                   onClear={() => {
-                    clearDieType(sides)
+                    tray.clearDie(sides)
                     setMenuFor(undefined)
                   }}
                 />
@@ -319,68 +242,68 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
       <div className='grid grid-cols-7 gap-1'>
         <ModButton
           label='−5'
-          onClick={() => bumpMod('minusFive', 'plusFive')}
+          onClick={() => tray.bumpModifier('minusFive')}
           disabled={disabled}
-          count={modCounts.minusFive}
+          count={tray.modifiers.minusFive}
           menuOpen={modMenuFor === 'minusFive'}
           onOpenMenu={() => openModMenu('minusFive')}
           onCloseMenu={() => setModMenuFor(undefined)}
-          onRemoveOne={() => removeOneMod('minusFive')}
-          onClearAll={() => clearMod('minusFive')}
+          onRemoveOne={() => tray.removeOneModifier('minusFive')}
+          onClearAll={() => tray.clearModifier('minusFive')}
         />
         <ModButton
           label='−1'
-          onClick={() => bumpMod('minusOne', 'plusOne')}
+          onClick={() => tray.bumpModifier('minusOne')}
           disabled={disabled}
-          count={modCounts.minusOne}
+          count={tray.modifiers.minusOne}
           menuOpen={modMenuFor === 'minusOne'}
           onOpenMenu={() => openModMenu('minusOne')}
           onCloseMenu={() => setModMenuFor(undefined)}
-          onRemoveOne={() => removeOneMod('minusOne')}
-          onClearAll={() => clearMod('minusOne')}
+          onRemoveOne={() => tray.removeOneModifier('minusOne')}
+          onClearAll={() => tray.clearModifier('minusOne')}
         />
         <ModButton
           label='+1'
-          onClick={() => bumpMod('plusOne', 'minusOne')}
+          onClick={() => tray.bumpModifier('plusOne')}
           disabled={disabled}
-          count={modCounts.plusOne}
+          count={tray.modifiers.plusOne}
           menuOpen={modMenuFor === 'plusOne'}
           onOpenMenu={() => openModMenu('plusOne')}
           onCloseMenu={() => setModMenuFor(undefined)}
-          onRemoveOne={() => removeOneMod('plusOne')}
-          onClearAll={() => clearMod('plusOne')}
+          onRemoveOne={() => tray.removeOneModifier('plusOne')}
+          onClearAll={() => tray.clearModifier('plusOne')}
         />
         <ModButton
           label='+5'
-          onClick={() => bumpMod('plusFive', 'minusFive')}
+          onClick={() => tray.bumpModifier('plusFive')}
           disabled={disabled}
-          count={modCounts.plusFive}
+          count={tray.modifiers.plusFive}
           menuOpen={modMenuFor === 'plusFive'}
           onOpenMenu={() => openModMenu('plusFive')}
           onCloseMenu={() => setModMenuFor(undefined)}
-          onRemoveOne={() => removeOneMod('plusFive')}
-          onClearAll={() => clearMod('plusFive')}
+          onRemoveOne={() => tray.removeOneModifier('plusFive')}
+          onClearAll={() => tray.clearModifier('plusFive')}
         />
         <ToggleButton
-          active={advantage === 'adv'}
+          active={tray.advantage === 'adv'}
           activeClass='border-emerald-500 bg-emerald-500 text-white'
-          onClick={() => toggleAdvantage('adv')}
+          onClick={() => tray.toggleAdvantage('adv')}
           disabled={disabled}
         >
           ADV
         </ToggleButton>
         <ToggleButton
-          active={advantage === 'dis'}
+          active={tray.advantage === 'dis'}
           activeClass='border-rose-500 bg-rose-500 text-white'
-          onClick={() => toggleAdvantage('dis')}
+          onClick={() => tray.toggleAdvantage('dis')}
           disabled={disabled}
         >
           DIS
         </ToggleButton>
         <ToggleButton
-          active={exploding}
+          active={tray.exploding}
           activeClass='border-warning bg-warning text-white'
-          onClick={() => setExploding(v => !v)}
+          onClick={() => tray.toggleExploding()}
           disabled={disabled}
         >
           EXP
@@ -392,8 +315,8 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
           intent='normal'
           variant='outline'
           size='lg'
-          onClick={clearAll}
-          disabled={disabled || isEmptyAll}
+          onClick={tray.clear}
+          disabled={disabled || tray.isEmpty}
           className='text-sm sm:text-base'
         >
           Clear
@@ -403,7 +326,7 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
           size='lg'
           icon={Dices}
           onClick={handleRoll}
-          disabled={disabled || isEmptyPools}
+          // disabled={disabled || isEmptyPools}
           className='flex-1 justify-center text-sm sm:text-base'
         >
           Roll

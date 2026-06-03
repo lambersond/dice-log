@@ -6,11 +6,12 @@ import { DiceTray } from './dice-tray'
 import { MessageInput } from './message-input'
 import { useDiceThemeSync } from '@/hooks/use-dice-theme-sync'
 import type { ChatMessage } from '@/types/chat'
-import type { RollRequest, RollResult } from '@/types/roll'
+import type { RollEntry } from '@/types/roll'
+import type { RollRequest } from '@lambersond/3d-dice-core'
 
 type Props = {
   userId: string
-  rolls: readonly RollResult[]
+  rolls: readonly RollEntry[]
   chats: readonly ChatMessage[]
   onRollRequest: (request: RollRequest) => void
   onSendMessage: (text: string) => void

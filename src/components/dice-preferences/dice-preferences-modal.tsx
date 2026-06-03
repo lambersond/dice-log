@@ -1,19 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import clsx from 'clsx'
-import { Search, X } from 'lucide-react'
 import {
   COLORSETS,
+  CUSTOM_COLORSET_KEY,
   MATERIALS,
   type ColorsetPreset,
   type DiceMaterial,
-} from './presets'
+} from '@lambersond/3d-dice-core'
+import { useDicePreferences } from '@lambersond/3d-dice-react'
+import clsx from 'clsx'
+import { Search, X } from 'lucide-react'
 import { Button, ColorPicker, IconButton } from '@/components/common'
-import {
-  CUSTOM_COLORSET_KEY,
-  useDicePreferences,
-} from '@/hooks/use-dice-preferences'
 
 type Props = {
   onClose: () => void
@@ -55,8 +53,7 @@ export function DicePreferencesModal({ onClose }: Readonly<Props>) {
   }, [filtered])
 
   return (
-    <div
-      role='dialog'
+    <dialog
       aria-modal='true'
       aria-label='Customize dice'
       className='fixed inset-0 z-50 flex sm:items-center sm:justify-center sm:px-4'
@@ -183,7 +180,7 @@ export function DicePreferencesModal({ onClose }: Readonly<Props>) {
           </Button>
         </footer>
       </div>
-    </div>
+    </dialog>
   )
 }
 

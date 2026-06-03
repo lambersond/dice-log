@@ -15,9 +15,6 @@ function formatRelative(at: number, now: number): string {
   return `${Math.floor(seconds / DAY)}d ago`
 }
 
-// One shared interval drives every consumer, so a long log doesn't spin up an
-// interval per row. Listeners are notified together and the timer is torn down
-// once the last consumer unmounts.
 const listeners = new Set<() => void>()
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -36,7 +33,6 @@ function subscribe(onTick: () => void) {
   }
 }
 
-/** Live "x minutes ago" label that refreshes on a shared ~30s ticker. */
 export function useRelativeTime(at: number): string {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => subscribe(() => setNow(Date.now())), [])

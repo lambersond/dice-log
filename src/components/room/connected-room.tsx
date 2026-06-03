@@ -1,11 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  DicePreferencesProvider,
+  localStoragePreferences,
+} from '@lambersond/3d-dice-react'
 import { ChannelProvider, useChannel, usePresence } from 'ably/react'
 import confetti from 'canvas-confetti'
 import { Copy } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { flushSync } from 'react-dom'
 import { PlayersButton } from './connected-players'
 import { RoomView } from './room-view'
 import { Button } from '@/components/common'
@@ -19,7 +24,8 @@ import { useUserProfile } from '@/hooks/use-user-profile'
 import { useVisitedRooms } from '@/hooks/use-visited-rooms'
 import { copyTextToClipboard } from '@/utils/copy-text-to-clipboard'
 import type { ChatMessage } from '@/types/chat'
-import type { RollResult, RollerInfo } from '@/types/roll'
+import type { RollEntry, RollerInfo } from '@/types/roll'
+import type { RollResult } from '@lambersond/3d-dice-core'
 import type * as Ably from 'ably'
 
 /** Skip confetti for replayed rolls coming in via channel rewind. */
@@ -48,6 +54,10 @@ type Props = {
 
 export function ConnectedRoom({ code, userId }: Readonly<Props>) {
   const channelName = `room:${code}`
+  const storage = useMemo(
+    () => localStoragePreferences('dice-log:dice-preferences'),
+    [],
+  )
   return (
     <ChannelProvider
       channelName={channelName}
@@ -67,7 +77,9 @@ export function ConnectedRoom({ code, userId }: Readonly<Props>) {
         params: { rewind: '100' },
       }}
     >
-      <ConnectedRoomInner code={code} userId={userId} />
+      <DicePreferencesProvider storage={storage}>
+        <ConnectedRoomInner code={code} userId={userId} />
+      </DicePreferencesProvider>
     </ChannelProvider>
   )
 }
@@ -121,14 +133,18 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
   const handleIncoming = useCallback(
     async (message: Ably.Message) => {
       if (message.clientId === userId) return
+      // flushSync: these run from Ably's listener (not a React event), and the
+      // log re-render wasn't being flushed from that context — only the
+      // React-independent dice renderer updated. Forcing the commit makes the
+      // remote entries appear live like local ones do.
       if (message.name === 'roll') {
-        const result = message.data as RollResult
-        appendRoll(result)
+        const result = message.data as RollEntry
+        flushSync(() => appendRoll(result))
         const fresh = Date.now() - result.at <= FRESH_ROLL_WINDOW_MS
         await playRemote(result)
         if (fresh && isSoloNat20(result)) fireNat20Confetti()
       } else if (message.name === 'chat') {
-        appendChat(message.data as ChatMessage)
+        flushSync(() => appendChat(message.data as ChatMessage))
       }
     },
     [appendRoll, appendChat, playRemote, userId],
