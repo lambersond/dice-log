@@ -14,6 +14,7 @@ export function Modal({
   onClose,
   title,
   subtitle,
+  dismissable = true,
   width = '',
   fullHeight = false,
   fullScreen = false,
@@ -35,6 +36,7 @@ export function Modal({
       popoverOpenOnMouseDownRef.current = false
       return
     }
+    if (!dismissable) return
     onClose()
   }
 
@@ -58,13 +60,13 @@ export function Modal({
   }, [isOpen, headerClassName])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !dismissable) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
+  }, [isOpen, dismissable, onClose])
 
   if (!isOpen) return
 
@@ -103,12 +105,14 @@ export function Modal({
             <p className='text-2xl font-bold text-text-primary'>{title}</p>
             {subtitle}
           </div>
-          <IconButton
-            icon={X}
-            onClick={onClose}
-            size='lg'
-            dataTestId='CloseIcon'
-          />
+          {dismissable && (
+            <IconButton
+              icon={X}
+              onClick={onClose}
+              size='lg'
+              dataTestId='CloseIcon'
+            />
+          )}
         </div>
         <div
           style={{

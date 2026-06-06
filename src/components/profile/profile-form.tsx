@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import clsx from 'clsx'
 import { Camera, Upload } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { Button, Input } from '@/components/common'
@@ -13,6 +14,11 @@ type Props = {
   onCancel?: () => void
   title?: string
   autoSave?: boolean
+  /**
+   * Drop the form's own card chrome (border/background/padding) and heading so
+   * it can sit inside a host that already supplies them (e.g. a Modal).
+   */
+  bare?: boolean
 }
 
 export function ProfileForm({
@@ -21,6 +27,7 @@ export function ProfileForm({
   onCancel,
   title,
   autoSave = false,
+  bare = false,
 }: Readonly<Props>) {
   const [name, setName] = useState(initial?.name ?? '')
   const [image, setImage] = useState<string | undefined>(initial?.image)
@@ -60,16 +67,21 @@ export function ProfileForm({
 
   return (
     <form
-      className='flex flex-col gap-4 rounded-lg border border-border-light bg-paper p-4'
+      className={clsx(
+        'flex flex-col gap-4',
+        !bare && 'rounded-lg border border-border-light bg-paper p-4',
+      )}
       onSubmit={e => {
         e.preventDefault()
         if (autoSave || !canSave) return
         onSave({ name: trimmedName, image })
       }}
     >
-      <h2 className='text-lg font-semibold text-text-primary'>
-        {title ?? (initial ? 'Edit your profile' : 'Set up your profile')}
-      </h2>
+      {!bare && (
+        <h2 className='text-lg font-semibold text-text-primary'>
+          {title ?? (initial ? 'Edit your profile' : 'Set up your profile')}
+        </h2>
+      )}
 
       <Input
         label='Display name'

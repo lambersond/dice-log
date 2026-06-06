@@ -11,7 +11,7 @@ import { PlayersButton } from './connected-players'
 import { RoomView } from './room-view'
 import { Button } from '@/components/common'
 import { DicePreferencesButton } from '@/components/dice-preferences'
-import { ProfilePromptModal } from '@/components/profile'
+import { useModals } from '@/components/modals/use-modals'
 import { usePersistedChats } from '@/hooks/use-persisted-chats'
 import { usePersistedRolls } from '@/hooks/use-persisted-rolls'
 import { useRollExecutor } from '@/hooks/use-roll-executor'
@@ -167,21 +167,27 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
 
   const needsProfile = profileLoaded && !profile
 
+  // The profile prompt is a gate, not a click-triggered dialog: open it whenever
+  // the user has no profile and close it once they do. Deps are all stable
+  // (memoized useModals, useCallback setProfile), so this only fires on the flip.
+  const { openModal, closeModal } = useModals()
+  useEffect(() => {
+    if (needsProfile) openModal('profile-prompt', { onSave: setProfile })
+    else closeModal('profile-prompt')
+  }, [needsProfile, openModal, closeModal, setProfile])
+
   return (
-    <>
-      <RoomView
-        userId={userId}
-        rolls={rolls}
-        chats={chats}
-        onRollRequest={requestRoll}
-        onSendMessage={handleSendMessage}
-        disabled={busy || needsProfile}
-        syncing={syncing}
-        newSinceAt={newSinceAt}
-        header={<RoomHeader code={code} channelName={channelName} />}
-      />
-      {needsProfile && <ProfilePromptModal onSave={setProfile} />}
-    </>
+    <RoomView
+      userId={userId}
+      rolls={rolls}
+      chats={chats}
+      onRollRequest={requestRoll}
+      onSendMessage={handleSendMessage}
+      disabled={busy || needsProfile}
+      syncing={syncing}
+      newSinceAt={newSinceAt}
+      header={<RoomHeader code={code} channelName={channelName} />}
+    />
   )
 }
 

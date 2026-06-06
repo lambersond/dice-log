@@ -6,4 +6,7 @@ export const MODALS = {
     () => import('@/components/modals/dice-preferences-modal'),
   ),
   players: lazy(() => import('@/components/modals/players-modal')),
+  'profile-prompt': lazy(
+    () => import('@/components/modals/profile-prompt-modal'),
+  ),
 }

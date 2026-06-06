@@ -75,7 +75,10 @@
       "Bash(node -e \"console.log\\(require.resolve\\('@lambersond/3d-dice-core/package.json'\\)\\)\")",
       "Bash(node -e 'console.log\\(JSON.stringify\\(require\\('\\\\''./node_modules/@lambersond/3d-dice-__TRACKED_VAR__/package.json'\\\\''\\).dependencies, null, 0\\)\\)')",
       "Bash(npm ls *)",
-      "Bash(npm prune *)"
+      "Bash(npm prune *)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(echo \"FIX_EXIT=$?\")",
+      "Bash(echo \"RELINT_EXIT=$?\")"
     ]
   }
 }
