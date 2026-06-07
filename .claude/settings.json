@@ -78,7 +78,9 @@
       "Bash(npm prune *)",
       "Bash(echo \"TSC_EXIT=$?\")",
       "Bash(echo \"FIX_EXIT=$?\")",
-      "Bash(echo \"RELINT_EXIT=$?\")"
+      "Bash(echo \"RELINT_EXIT=$?\")",
+      "Bash(node -e 'const fs=require\\('\\\\''fs'\\\\''\\);const s=JSON.parse\\(fs.readFileSync\\('\\\\''node_modules/@lambersond/3d-dice-__TRACKED_VAR__/package.json'\\\\'','\\\\''utf8'\\\\''\\)\\);console.log\\('\\\\''version:'\\\\'', s.version\\);console.log\\('\\\\''files:'\\\\'', JSON.stringify\\(s.files\\)\\);console.log\\('\\\\''scripts:'\\\\'', JSON.stringify\\(s.scripts,null,2\\)\\);')",
+      "Bash(echo \"RELINT=$?\")"
     ]
   }
 }

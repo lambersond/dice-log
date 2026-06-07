@@ -51,7 +51,7 @@ function LonelyRoomInner({ userId }: Readonly<{ userId: string }>) {
       chats={chats}
       onRollRequest={requestRoll}
       onSendMessage={handleSendMessage}
-      disabled={busy}
+      busy={busy}
       header={<LonelyHeader />}
     />
   )

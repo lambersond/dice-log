@@ -183,7 +183,8 @@ function ConnectedRoomInner({ code, userId }: Readonly<Props>) {
       chats={chats}
       onRollRequest={requestRoll}
       onSendMessage={handleSendMessage}
-      disabled={busy || needsProfile}
+      disabled={needsProfile}
+      busy={busy}
       syncing={syncing}
       newSinceAt={newSinceAt}
       header={<RoomHeader code={code} channelName={channelName} />}

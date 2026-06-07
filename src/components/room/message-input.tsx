@@ -2,14 +2,21 @@
 
 import { useState } from 'react'
 import { parseRollExpression, type RollRequest } from '@lambersond/3d-dice-core'
-import { Send } from 'lucide-react'
+import { Send, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/common'
 
 type Props = {
   disabled?: boolean
   onSendMessage: (text: string) => void
   onRollRequest: (request: RollRequest) => void
+  /** True when dice are staged in the tray (drives the empty-box roll + warning). */
+  hasSelectedDice?: boolean
+  /** Roll the staged tray dice — used when the message box is empty. */
+  onRollSelectedDice: () => void
 }
+
+const WARNING_MSG =
+  "Only your message will be sent — the selected dice below won't be rolled."
 
 /** Returns the dice expression body if `text` starts with `/r` or `/roll`. */
 function extractRollCommand(text: string): string | undefined {
@@ -24,16 +31,28 @@ export function MessageInput({
   disabled = false,
   onSendMessage,
   onRollRequest,
+  hasSelectedDice = false,
+  onRollSelectedDice,
 }: Readonly<Props>) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | undefined>()
 
   const trimmed = text.trim()
-  const canSend = !!trimmed && !disabled
+  const hasText = !!trimmed
+  // Empty box + staged dice rolls the tray (like the Roll button); otherwise text
+  // is required. When both are present, text wins and the dice are left staged —
+  // the warning state below makes that explicit.
+  const canSubmit = !disabled && (hasText || hasSelectedDice)
+  const showWarning = hasText && hasSelectedDice
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!canSend) return
+    if (!canSubmit) return
+
+    if (!hasText) {
+      onRollSelectedDice()
+      return
+    }
 
     const rollExpr = extractRollCommand(trimmed)
     if (rollExpr !== undefined) {
@@ -73,9 +92,10 @@ export function MessageInput({
         />
         <Button
           intent='primary'
-          icon={Send}
+          icon={showWarning ? TriangleAlert : Send}
           type='submit'
-          disabled={!canSend}
+          disabled={!canSubmit}
+          tooltip={showWarning ? WARNING_MSG : undefined}
           aria-label='Send'
         >
           Send

@@ -13,7 +13,6 @@ import {
   type ModifierKey,
   type RollRequest,
 } from '@lambersond/3d-dice-core'
-import { useTray } from '@lambersond/3d-dice-react'
 import clsx from 'clsx'
 import { Dices, InfoIcon } from 'lucide-react'
 import { Button, Popover } from '@/components/common'
@@ -25,6 +24,7 @@ import {
   D12Icon,
   D20Icon,
 } from '@/components/common/icons'
+import type { UseTray } from '@lambersond/3d-dice-react'
 
 const DIE_ICON: Record<
   Exclude<DieSides, 100>,
@@ -55,6 +55,7 @@ function DieIcon({ sides }: Readonly<{ sides: DieSides }>) {
 }
 
 type Props = {
+  tray: UseTray
   onRoll: (request: RollRequest) => void
   disabled?: boolean
 }
@@ -89,10 +90,10 @@ function useLongPress(onLongPress: () => void) {
   return { start, cancel, triggered }
 }
 
-export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
+export function DiceTray({ tray, onRoll, disabled = false }: Readonly<Props>) {
   // Roll-assembly state (dice, modifiers, advantage, exploding) lives in the
-  // shared tray state machine; only menu/long-press UI state is local.
-  const tray = useTray()
+  // shared tray state machine, lifted to RoomView so the message input's Send
+  // button can roll it too; only menu/long-press UI state is local.
   const [menuFor, setMenuFor] = useState<DieSides | undefined>()
   const [modMenuFor, setModMenuFor] = useState<ModifierKey | undefined>()
 
@@ -334,7 +335,20 @@ export function DiceTray({ onRoll, disabled = false }: Readonly<Props>) {
         <Popover
           asChild
           placement='top'
-          content='Tap dice to add — long-press or right-click to remove.'
+          content={
+            <div className='flex max-w-72 flex-col gap-1.5'>
+              <p>Tap dice to add — long-press or right-click to remove.</p>
+              <p>
+                <span className='font-semibold'>ADV / DIS</span> — d20s only.
+                ADV rolls two d20s and keeps the higher; DIS keeps the lower.
+              </p>
+              <p>
+                <span className='font-semibold'>EXP</span> (exploding) — when a
+                die rolls its max it&apos;s rolled again and added, repeating
+                while it keeps maxing out.
+              </p>
+            </div>
+          }
           contentClassName='max-w-[calc(100vw_-_16px)] z-30 rounded-lg bg-card px-3 py-2 text-xs text-text-primary shadow-md ring-1 ring-black/5'
         >
           <button
