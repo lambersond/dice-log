@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import {
   DicePreferencesProvider,
+  DiceRendererProvider,
   localStoragePreferences,
 } from '@lambersond/3d-dice-react'
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
@@ -42,7 +43,9 @@ function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <AblyProvider>
       <DicePreferencesProvider storage={storage}>
-        <ModalProvider>{children}</ModalProvider>
+        <DiceRendererProvider>
+          <ModalProvider>{children}</ModalProvider>
+        </DiceRendererProvider>
       </DicePreferencesProvider>
     </AblyProvider>
   )

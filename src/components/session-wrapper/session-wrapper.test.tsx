@@ -15,7 +15,10 @@ jest.mock(
     DicePreferencesProvider: ({ children }: { children: ReactNode }) => (
       <>{children}</>
     ),
-    localStoragePreferences: () => ({ get: () => undefined, set: () => {} }),
+    DiceRendererProvider: ({ children }: { children: ReactNode }) => (
+      <>{children}</>
+    ),
+    localStoragePreferences: () => ({ get: () => {}, set: () => {} }),
   }),
   { virtual: true },
 )
